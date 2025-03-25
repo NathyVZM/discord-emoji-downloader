@@ -1,0 +1,37 @@
+{
+	"plugins": ["jsdoc", "promise", "import", "node"],
+	"extends": ["plugin:jsdoc/recommended"],
+	"categories": {
+		"correctness": "error",
+		"suspicious": "warn",
+		"pedantic": "error",
+		"perf": "error",
+		"style": "warn",
+		"restriction": "error",
+		"nursery": "error"
+	},
+	"rules": {
+		"sort-imports": "off",
+		"sort-keys": "off",
+		"max-nested-callbacks": ["error", 3],
+		"max-lines-per-function": [
+			"error",
+			{
+				"max": 100,
+				"skipBlankLines": true,
+				"skipComments": true
+			}
+		],
+		"no-undef": "off",
+		"no-console": "off",
+		"no-ternary": "off",
+		"no-alert": "off",
+		"max-depth": ["error", 4],
+		"avoid-new": "off",
+		"no-magic-numbers": "off",
+		"no-plusplus": "off",
+		"max-params": ["warn", 5],
+		"no-await-in-loop": "off",
+		"yoda": ["never"]
+	}
+}
