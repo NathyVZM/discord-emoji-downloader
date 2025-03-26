@@ -56,13 +56,13 @@ await Promise.all(
 			// Step 3.3: Open the emoji picker and switch to the server tab
 			const emojiButtonSelector: string = await openEmojiPicker(page, server.name)
 
-			// Step 3.4: Extract emoji URLs
-			const emojiUrls: string[] = await extractEmojiUrls(page, server.name)
-			console.log(emojiUrls)
-			console.log(`Found ${emojiUrls.length} emojis in ${server.name}.`)
+			// Step 3.4: Extract emoji URLs and names
+			const emojis: { url: string; name: string }[] = await extractEmojiUrls(page, server.name)
+			console.log(emojis)
+			console.log(`Found ${emojis.length} emojis in ${server.name}.`)
 
 			// Step 3.5: Download, resize, and convert emojis to .webp
-			await downloadAndProcessEmojis(emojiUrls, server, config.outputBaseDir, env.emojiSize)
+			await downloadAndProcessEmojis(emojis, server, config.outputBaseDir, env.emojiSize)
 
 			// Close the emoji picker before moving to the next server
 			await page.click(emojiButtonSelector) // Click the emoji button again to close the picker
