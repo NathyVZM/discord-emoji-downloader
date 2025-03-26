@@ -27,8 +27,8 @@ Before you begin, ensure you have the following installed:
 1. **Clone the Repository**:
 
    ```bash
-   git clone https://github.com/username/discord-emoji-downloader.git
-   cd discord-emoji-downloader
+   git clone https://github.com/NathyVZM/discord-emojis.git
+   cd discord-emojis
    ```
 
 2. **Install Dependencies**:
@@ -206,4 +206,3 @@ Please ensure your code follows the project’s coding style.
 - [Sharp](https://sharp.pixelplumbing.com/) for image processing.
 - [Bun](https://bun.sh/) for a fast JavaScript runtime and package manager.
 - The Discord community for inspiration.
-
