@@ -1,5 +1,8 @@
 # Discord Emoji Downloader
 
+![GitHub Issues](https://img.shields.io/github/issues/NathyVZM/discord-emojis)  
+![GitHub Stars](https://img.shields.io/github/stars/NathyVZM/discord-emojis)
+
 A TypeScript-based tool to download and process emojis from Discord servers using Puppeteer. This script logs into Discord, navigates to specified servers and channels, extracts emoji URLs, downloads the emojis, resizes them, and saves them as `.webp` files in a structured directory.
 
 ## Features
