@@ -5,11 +5,11 @@ import type { Server } from './types'
 import type { BunFile } from 'bun'
 
 /**
- * Extracts the URLs of emojis from a Discord server's emoji picker using Puppeteer.
+ * Extracts the URLs and names of emojis from a Discord server's emoji picker using Puppeteer.
  *
  * @param {Page} page - The Puppeteer page instance to interact with.
  * @param {string} serverName - The name of the Discord server to extract emojis from.
- * @returns {Promise<string>} A promise that resolves to an array of emoji URLs.
+ * @returns {Promise<{ url: string, name: string }[]>} A promise that resolves to an array of objects containing emoji URLs and names.
  *
  * @throws Will throw an error if the emoji picker container or server emoji section is not found.
  *
@@ -17,14 +17,14 @@ import type { BunFile } from 'bun'
  * 1. Finds the scrollable container for the emoji picker.
  * 2. Finds the server emojis section within the emoji picker.
  * 3. Iteratively scrolls through the emoji picker to load all emojis.
- * 4. Collects the URLs of all visible emojis, ensuring no duplicates.
+ * 4. Collects the URLs and names of all visible emojis, ensuring no duplicates.
  * 5. Stops scrolling when no new emojis are loaded after 3 consecutive scrolls or when reaching the next category section.
  *
  * The URLs are modified to request the emojis in high quality (size=512) and preserve the animated flag if present.
  */
-export const extractEmojiUrls = async (page: Page, serverName: string): Promise<string[]> => {
-	console.log('Extracting emoji URLs...')
-	return await page.evaluate(async (): Promise<string[]> => {
+export const extractEmojiUrls = async (page: Page, serverName: string): Promise<{ url: string; name: string }[]> => {
+	console.log('Extracting emoji URLs and names...')
+	return await page.evaluate(async (): Promise<{ url: string; name: string }[]> => {
 		// Find the scrollable container for the emoji picker
 		const emojiPickerContainer: HTMLElement | null = document.querySelector(
 			'div[class*="emojiPicker"] div[class*="scroller"]'
@@ -41,7 +41,8 @@ export const extractEmojiUrls = async (page: Page, serverName: string): Promise<
 			throw new Error('Server emoji section not found')
 		}
 
-		const urls: Set<string> = new Set() // Use a Set to avoid duplicates
+		const emojiData: Set<string> = new Set() // Use a Set to avoid duplicates (based on URL)
+		const emojisWithNames: { url: string; name: string }[] = []
 		let previousEmojiCount: number = 0
 		let scrollAttempts: number = 0
 		const maxScrollAttempts: number = 50 // Maximum number of scroll attempts to prevent infinite loop
@@ -63,10 +64,22 @@ export const extractEmojiUrls = async (page: Page, serverName: string): Promise<
 				if (isAnimated && !src.includes('animated=true')) {
 					src += '&animated=true'
 				}
-				urls.add(src) // Add to Set to avoid duplicates
+
+				// Get the emoji name from the alt attribute (e.g., ":PES_Bunny:")
+				let name: string = emoji.alt || ''
+				// Clean the name by removing the leading and trailing colons (e.g., ":PES_Bunny:" -> "PES_Bunny")
+				name = name.replace(/^:/, '').replace(/:$/, '')
+				// Replace any characters that are invalid in filenames (e.g., spaces, special characters)
+				name = name.replace(/[^a-zA-Z0-9_-]/g, '_')
+
+				// Only add if the URL hasn't been seen before
+				if (!emojiData.has(src)) {
+					emojiData.add(src)
+					emojisWithNames.push({ url: src, name })
+				}
 			})
 
-			const currentEmojiCount: number = urls.size
+			const currentEmojiCount: number = emojiData.size
 			console.log(`Scroll attempt ${scrollAttempts + 1}: Found ${currentEmojiCount} emojis so far`)
 
 			// Check if we've reached the end of the server emojis section
@@ -100,46 +113,46 @@ export const extractEmojiUrls = async (page: Page, serverName: string): Promise<
 			scrollAttempts++
 		}
 
-		return Array.from(urls) // Convert Set back to Array
+		return emojisWithNames
 	}, serverName)
 }
 
 /**
- * Downloads, processes, and saves a list of emojis from given URLs.
+ * Downloads, processes, and saves a list of emojis from given URLs, using their Discord names.
  *
- * @param {string[]} emojiUrls - An array of URLs pointing to the emoji images to be downloaded.
+ * @param {Array<{ url: string, name: string }>} emojis - An array of objects containing the URLs and names of the emoji images to be downloaded.
  * @param {Server} server - The server object containing server-specific information such as folder and name.
  * @param {string} outputBaseDir - The base directory where the processed emojis will be saved.
  * @param {number} emojiSize - The desired size (width and height) for the resized emojis.
  * @returns {Promise<void>} A promise that resolves when all emojis have been processed and saved.
  *
- * The function performs the following steps for each emoji URL:
+ * The function performs the following steps for each emoji:
  * 1. Downloads the emoji image from the URL.
  * 2. Converts the downloaded image to a buffer.
  * 3. Resizes and converts the image to .webp format using the `sharp` library.
- * 4. Saves the processed image to a server-specific folder.
+ * 4. Saves the processed image to a server-specific folder using the emoji's Discord name.
  * 5. Verifies that the file was saved correctly by checking its size on disk.
  *
  * If any step fails, an error message is logged to the console.
  */
 export const downloadAndProcessEmojis = async (
-	emojiUrls: string[],
+	emojis: { url: string; name: string }[],
 	server: Server,
 	outputBaseDir: string,
 	emojiSize: number
 ): Promise<void> => {
-	for (const [index, url] of emojiUrls.entries()) {
-		console.log(`Downloading emoji ${index + 1}/${emojiUrls.length} from URL: ${url}...`)
+	for (const [index, emoji] of emojis.entries()) {
+		console.log(`Downloading emoji ${index + 1}/${emojis.length} (${emoji.name}) from URL: ${emoji.url}...`)
 
 		try {
 			// Download the emoji using Bun's fetch
-			const response: Response = await fetch(url)
+			const response: Response = await fetch(emoji.url)
 			if (!response.ok) {
 				throw new Error(`Failed to fetch emoji: ${response.statusText}`)
 			}
 
 			const buffer: Buffer = Buffer.from(await response.arrayBuffer())
-			console.log(`Downloaded emoji ${index + 1}, buffer size: ${buffer.length} bytes`)
+			console.log(`Downloaded emoji ${index + 1} (${emoji.name}), buffer size: ${buffer.length} bytes`)
 
 			// Check if the buffer is empty
 			if (buffer.length === 0) {
@@ -147,7 +160,7 @@ export const downloadAndProcessEmojis = async (
 			}
 
 			// Resize and convert to .webp using sharp
-			const resizedImage: Buffer = await sharp(buffer, { animated: url.includes('animated=true') })
+			const resizedImage: Buffer = await sharp(buffer, { animated: emoji.url.includes('animated=true') })
 				.resize({
 					width: emojiSize,
 					height: emojiSize,
@@ -157,15 +170,15 @@ export const downloadAndProcessEmojis = async (
 				.webp({ quality: 80 }) // Convert to .webp with good quality
 				.toBuffer()
 
-			console.log(`Processed emoji ${index + 1}, resized buffer size: ${resizedImage.length} bytes`)
+			console.log(`Processed emoji ${index + 1} (${emoji.name}), resized buffer size: ${resizedImage.length} bytes`)
 
 			// Check if the resized buffer is empty
 			if (resizedImage.length === 0) {
 				throw new Error('Resized buffer is empty')
 			}
 
-			// Save the image to the server-specific folder using Bun.write
-			const fileName: string = `emoji_${index + 1}.webp`
+			// Save the image to the server-specific folder using the emoji's Discord name
+			const fileName: string = `${emoji.name}.webp`
 			const filePath: string = path.join(outputBaseDir, server.folder, fileName)
 			await Bun.write(filePath, resizedImage)
 			console.log(`Saved ${fileName} to ${server.folder}`)
@@ -175,7 +188,7 @@ export const downloadAndProcessEmojis = async (
 			const fileSize: number = (await file.arrayBuffer()).byteLength
 			console.log(`File size on disk: ${fileSize} bytes`)
 		} catch (err) {
-			console.error(`Failed to process emoji ${index + 1} in ${server.name}:`, (err as Error).message)
+			console.error(`Failed to process emoji ${index + 1} (${emoji.name}) in ${server.name}:`, (err as Error).message)
 		}
 	}
 }
