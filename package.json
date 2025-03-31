@@ -1,5 +1,5 @@
 {
-  "name": "discord-emojis",
+  "name": "discord-emoji-downloader",
   "module": "index.ts",
   "type": "module",
   "private": true,
