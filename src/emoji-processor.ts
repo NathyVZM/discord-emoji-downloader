@@ -167,7 +167,7 @@ export const downloadAndProcessEmojis = async (
 					fit: 'inside', // Ensure one side is 512px, the other can be <= 512px
 					withoutEnlargement: true // Don't upscale smaller images
 				})
-				.webp({ quality: 80 }) // Convert to .webp with good quality
+				.webp({ quality: 100 }) // Convert to .webp with good quality
 				.toBuffer()
 
 			console.log(`Processed emoji ${index + 1} (${emoji.name}), resized buffer size: ${resizedImage.length} bytes`)
